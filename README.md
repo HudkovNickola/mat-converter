@@ -16,9 +16,11 @@ Go to *dist/bin* and run *./start.sh*
 
 All configuration on the file *dist/config.properties*
 
+## Results and resources
 ftp://cs.stanford.edu/cs/cvgl/ObjectNet3D/ObjectNet3D_annotations.zip - 90,000+ annotations files 
+
 *This converter processes 90,000 files in about 10 seconds*
 
-TODO:
+## TODO:
 1. Add app.properties, with configuration +
 2. Add Image and CAD copier
