@@ -5,7 +5,9 @@ Converting mat dataset files to json files
 ## Build:
 
 Build *mvn clean install -DskipTests*
+
 *cd target*
+
 Run *java -cp mat-to-json-1.0-SNAPSHOT.jar Main (path-to-configuration-file)*
 
 ## Dist:
