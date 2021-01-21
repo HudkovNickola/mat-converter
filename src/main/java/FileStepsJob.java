@@ -32,10 +32,8 @@ public class FileStepsJob implements Callable<Map<String, String>> {
     private final List<String> fileNames;
 
     FileStepsJob(String tmpDir, String targetDir, List<String> fileNames) {
-        final boolean isContainSlashTargetDir = isContainSlash(targetDir);
-        this.targetDir = isContainSlashTargetDir ? targetDir : targetDir + "/";
-        final boolean isContainSlashTmpDir = isContainSlash(tmpDir);
-        this.tmpDir = isContainSlashTmpDir ? tmpDir : tmpDir + "/";
+        this.targetDir = FileUtils.validatePath(targetDir);
+        this.tmpDir = FileUtils.validatePath(tmpDir);
         this.fileNames = fileNames;
     }
 
@@ -88,12 +86,8 @@ public class FileStepsJob implements Callable<Map<String, String>> {
     }
 
     private void createErrorAndProcessedFolder() {
-        final File errorFolder = new File(tmpDir + "/error");
-        final File processedFolder = new File(tmpDir + "/processed");
-        if (!errorFolder.exists() && !processedFolder.exists()){
-            errorFolder.mkdirs();
-            processedFolder.mkdir();
-        }
+        FileUtils.createDir(tmpDir, "error");
+        FileUtils.createDir(tmpDir, "processed");
     }
 
     private Pair<String, String> saveFiles(Pair<String, String> content) {
@@ -108,10 +102,6 @@ public class FileStepsJob implements Callable<Map<String, String>> {
             content.setProgress(FAULT);
         }
         return content;
-    }
-
-    private boolean isContainSlash(String dir) {
-        return '/' == (dir.charAt(dir.length() - 1));
     }
 
     static class Pair<T, S> {

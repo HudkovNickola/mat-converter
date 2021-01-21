@@ -3,12 +3,16 @@ import org.apache.logging.log4j.Logger;
 
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -20,13 +24,36 @@ public class Main {
     private static final int BATCH = 50;
 
     public static void main(String[] args) throws Exception {
-        final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() - 1);
-        final String sourceDir = args[0];
-        final String tmpDir = args[1];
-        final String targetDir = args[2];
+        try (final InputStream input = new FileInputStream(args[0])) {
+            final Properties prop = new Properties();
+            prop.load(input);
+            final String sourceDir = prop.getProperty("source.dir");
+            final String targetDir = prop.getProperty("target.dir");
+            final List<FileStepsJob> jobs = prepareJobs(sourceDir, targetDir);
+            final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() - 1);
+            final List<Future<Map<String, String>>> result = submitCalls(executorService, jobs);
+            printResult(result);
+            executorService.shutdown();
+        } catch (ArrayIndexOutOfBoundsException e) {
+            LOGGER.error("Please set argument path to config file. \n Example java Main <path_to_config>");
+        } catch (IOException e) {
+            LOGGER.error("Can't load properties file");
+        }
+    }
+
+    private static List<FileStepsJob> prepareJobs(String sourceDir, String targetDir) throws Exception {
+        final String dir = FileUtils.validatePath(targetDir);
+        final String tmp = FileUtils.createAndReturnDir(dir, "tmp");
+        final String resultDir = FileUtils.createAndReturnDir(dir, "result");
+        return prepareCalls(sourceDir, tmp, resultDir);
+    }
+
+    private static List<FileStepsJob> prepareCalls(String sourceDir, String tmp, String resultDir) throws Exception {
         final List<File> listOfFiles = getListOfFiles(sourceDir);
-        final List<FileStepsJob> listOfCalls = prepareCallByBatch(tmpDir, targetDir, listOfFiles);
-        final List<Future<Map<String, String>>> result = submitCalls(executorService, listOfCalls);
+        return prepareCallByBatch(tmp, resultDir, listOfFiles);
+    }
+
+    private static void printResult(List<Future<Map<String, String>>> result) throws InterruptedException, java.util.concurrent.ExecutionException {
         final Map<String, String> finalResult = new HashMap<>();
         for (final Future<Map<String, String>> mapFuture : result) {
             final Map<String, String> printResult = mapFuture.get();
@@ -42,7 +69,6 @@ public class Main {
         }
         LOGGER.info("=================RESULT===============");
         finalResult.forEach((filePath, status) -> LOGGER.info("File: {} | Status: {}", filePath, status));
-        executorService.shutdown();
     }
 
     private static List<Future<Map<String, String>>> submitCalls(ExecutorService executorService, List<FileStepsJob> listOfCalls) {
